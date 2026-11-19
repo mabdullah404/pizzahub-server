@@ -1,0 +1,106 @@
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { connectDB } from './config/db.js';
+import { seedInitialData } from './utils/seedData.js';
+import { handleStripeWebhook } from './controllers/paymentController.js';
+
+// Route imports
+import menuRoutes from './routes/menuRoutes.js';
+import orderRoutes from './routes/orderRoutes.js';
+import userRoutes from './routes/userRoutes.js';
+import dashboardRoutes from './routes/dashboardRoutes.js';
+import paymentRoutes from './routes/paymentRoutes.js';
+import uploadRoutes from './routes/uploadRoutes.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.join(__dirname, '.env') });
+
+const app = express();
+const port = process.env.PORT || 5000;
+
+// Stripe Webhook MUST receive raw body for cryptographic signature verification
+app.post(
+  '/api/payments/webhook',
+  express.raw({ type: 'application/json' }),
+  handleStripeWebhook
+);
+
+// Standard Middlewares
+app.use(
+  cors({
+    origin: [
+      process.env.CLIENT_URL || 'http://localhost:3000',
+      'http://localhost:3000',
+      'http://127.0.0.1:3000',
+    ],
+    credentials: true,
+  })
+);
+
+app.use(express.json());
+
+// Request logger
+app.use((req, res, next) => {
+  if (req.originalUrl !== '/api/payments/webhook') {
+    console.log(`[API] ${new Date().toISOString()} -> ${req.method} ${req.originalUrl}`);
+  }
+  next();
+});
+
+// Health check route
+app.get('/', (req, res) => {
+  res.json({
+    status: 'ok',
+    message: '🍕 PizzaHub REST API Server is running smoothly!',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
+  });
+});
+
+// Mount modular API routes
+app.use('/api/menu', menuRoutes);
+app.use('/api/orders', orderRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/upload', uploadRoutes);
+
+// Global 404 Handler for undefined API routes
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: `API Route not found: ${req.method} ${req.originalUrl}`,
+  });
+});
+
+// Global Error Handler
+app.use((err, req, res, next) => {
+  console.error('❌ Unhandled Server Error:', err);
+  res.status(err.status || 500).json({
+    success: false,
+    message: err.message || 'Internal server error occurred.',
+  });
+});
+
+// Start Database & Listen
+async function startServer() {
+  try {
+    await connectDB();
+    await seedInitialData();
+
+    app.listen(port, () => {
+      console.log(`🚀 PizzaHub Server running on http://localhost:${port}`);
+    });
+  } catch (err) {
+    console.error('❌ Fatal server startup error:', err);
+    process.exit(1);
+  }
+}
+
+startServer();
+
+export default app;
