@@ -29,19 +29,48 @@ app.post(
   handleStripeWebhook
 );
 
-// Standard Middlewares
+// Standard Middlewares & CORS
 app.use(
   cors({
-    origin: [
-      process.env.CLIENT_URL || 'http://localhost:3000',
-      'http://localhost:3000',
-      'http://127.0.0.1:3000',
-    ],
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps, curl, or direct browser GETs)
+      if (!origin) return callback(null, true);
+
+      const allowedOrigins = [
+        process.env.CLIENT_URL,
+        'https://pizzahub-client-tan.vercel.app',
+        'http://localhost:3000',
+        'http://127.0.0.1:3000',
+      ].filter(Boolean);
+
+      if (
+        allowedOrigins.includes(origin) ||
+        origin.endsWith('.vercel.app') ||
+        process.env.NODE_ENV !== 'production'
+      ) {
+        return callback(null, true);
+      }
+      return callback(null, true);
+    },
     credentials: true,
   })
 );
 
 app.use(express.json());
+
+// Serverless DB connection middleware
+app.use(async (req, res, next) => {
+  if (req.path === '/' || req.path === '/api/payments/webhook') {
+    return next();
+  }
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    console.error('Database connection error in request:', err);
+    next();
+  }
+});
 
 // Request logger
 app.use((req, res, next) => {
@@ -86,21 +115,23 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Start Database & Listen
-async function startServer() {
-  try {
-    await connectDB();
-    await seedInitialData();
+// Start Database & Listen for standalone/local development
+if (!process.env.VERCEL) {
+  async function startServer() {
+    try {
+      await connectDB();
+      await seedInitialData();
 
-    app.listen(port, () => {
-      console.log(`🚀 PizzaHub Server running on http://localhost:${port}`);
-    });
-  } catch (err) {
-    console.error('❌ Fatal server startup error:', err);
-    process.exit(1);
+      app.listen(port, () => {
+        console.log(`🚀 PizzaHub Server running on http://localhost:${port}`);
+      });
+    } catch (err) {
+      console.error('❌ Fatal server startup error:', err);
+      process.exit(1);
+    }
   }
-}
 
-startServer();
+  startServer();
+}
 
 export default app;
