@@ -42,7 +42,7 @@ export async function createCheckoutSession(req, res) {
       return res.json({
         success: true,
         mode: 'sandbox',
-        url: `${clientUrl}/checkout/success?session_id=${sandboxSessionId}&sandbox=true`,
+        url: `${clientUrl}/dashboard/vendor/subscription?session_id=${sandboxSessionId}&payment=success&sandbox=true`,
         sessionId: sandboxSessionId,
       });
     }
@@ -70,8 +70,8 @@ export async function createCheckoutSession(req, res) {
         vendorName: user.name || 'Vendor',
         plan: 'premium',
       },
-      success_url: `${clientUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${clientUrl}/checkout/cancel`,
+      success_url: `${clientUrl}/dashboard/vendor/subscription?session_id={CHECKOUT_SESSION_ID}&payment=success`,
+      cancel_url: `${clientUrl}/dashboard/vendor/subscription?payment=cancelled`,
     });
 
     res.json({
