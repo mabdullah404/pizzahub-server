@@ -1,5 +1,14 @@
 import { collections, toObjectId } from '../config/db.js';
 
+export const VALID_CATEGORIES = [
+  'Classic Pizzas',
+  'Vegetarian Pizzas',
+  'Meat Lovers',
+  'Specialty / Gourmet Pizzas',
+  'Sides & Appetizers',
+  'Beverages & Desserts',
+];
+
 /**
  * Public Menu Listing with Advanced Search, Filtering, and Sorting
  * Challenge 1 Implementation:
@@ -111,6 +120,13 @@ export async function createMenuItem(req, res) {
       return res.status(400).json({
         success: false,
         message: 'Price must be a valid positive number.',
+      });
+    }
+
+    if (!VALID_CATEGORIES.includes(category.trim())) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid category. Must be one of: ${VALID_CATEGORIES.join(', ')}`,
       });
     }
 

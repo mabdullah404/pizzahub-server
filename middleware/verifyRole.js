@@ -42,3 +42,18 @@ export function verifyVendorOrAdmin(req, res, next) {
   }
   next();
 }
+
+/**
+ * Generic role enforcement helper: requireRole('admin' | 'vendor' | 'customer')
+ */
+export function requireRole(requiredRole) {
+  return (req, res, next) => {
+    if (!req.user || req.user.role !== requiredRole) {
+      return res.status(403).json({
+        success: false,
+        message: `Forbidden: ${requiredRole.charAt(0).toUpperCase() + requiredRole.slice(1)} privileges required.`,
+      });
+    }
+    next();
+  };
+}

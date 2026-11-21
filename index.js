@@ -60,7 +60,7 @@ app.use(express.json());
 
 // Serverless DB connection middleware
 app.use(async (req, res, next) => {
-  if (req.path === '/' || req.path === '/api/payments/webhook') {
+  if (req.path === '/' || req.path === '/api/health' || req.path === '/api/payments/webhook') {
     return next();
   }
   try {
@@ -80,11 +80,21 @@ app.use((req, res, next) => {
   next();
 });
 
-// Health check route
+// Health check routes
 app.get('/', (req, res) => {
   res.json({
     status: 'ok',
     message: '🍕 PizzaHub REST API Server is running smoothly!',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
+  });
+});
+
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    service: 'pizzahub-server',
+    uptime: process.uptime(),
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development',
   });
