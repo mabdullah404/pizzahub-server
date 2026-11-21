@@ -1,9 +1,9 @@
 import Stripe from 'stripe';
 import { collections, toObjectId } from '../config/db.js';
 
-const stripe = process.env.STRIPE_SECRET_KEY
-  ? new Stripe(process.env.STRIPE_SECRET_KEY)
-  : null;
+const getStripe = () => {
+  return process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
+};
 
 const PREMIUM_PLAN_PRICE = 29.0; // $29.00 / month
 
@@ -23,6 +23,7 @@ export async function createCheckoutSession(req, res) {
       });
     }
 
+    const stripe = getStripe();
     if (!stripe) {
       // Sandbox fallback if Stripe API key is not configured locally yet
       const sandboxSessionId = `sandbox_cs_${Date.now()}_${Math.random().toString(36).substring(7)}`;
@@ -35,7 +36,6 @@ export async function createCheckoutSession(req, res) {
     }
 
     const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
       line_items: [
         {
           price_data: {
@@ -84,6 +84,7 @@ export async function createCheckoutSession(req, res) {
  */
 export async function handleStripeWebhook(req, res) {
   const sig = req.headers['stripe-signature'];
+  const stripe = getStripe();
   let event = null;
 
   try {
