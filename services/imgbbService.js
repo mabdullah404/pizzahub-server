@@ -30,7 +30,7 @@ export async function uploadToImgBB(fileBuffer, originalName = 'pizza.jpg') {
   }
 
   const base64Data = fileBuffer.toString('base64');
-  const formData = new URLSearchParams();
+  const formData = new FormData();
   formData.append('image', base64Data);
   formData.append('name', originalName);
 
