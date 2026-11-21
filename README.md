@@ -2,6 +2,11 @@
 
 PizzaHub Server is the high-performance backend REST API powering the PizzaHub pizza ordering, vendor management, and subscription platform.
 
+- **Live Server API**: [https://pizzahub-server-mu.vercel.app](https://pizzahub-server-mu.vercel.app)
+- **Live Client URL**: [https://pizzahub-client-tan.vercel.app](https://pizzahub-client-tan.vercel.app)
+- **Server GitHub**: [https://github.com/mabdullah404/pizzahub-server](https://github.com/mabdullah404/pizzahub-server)
+- **Client GitHub**: [https://github.com/mabdullah404/pizzahub-client](https://github.com/mabdullah404/pizzahub-client)
+
 ---
 
 ## 🛠️ Technology Stack & npm Packages
