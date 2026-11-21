@@ -7,12 +7,16 @@ import {
   updateMenuItem,
   deleteMenuItem,
   updateMenuItemStatus,
+  getAdminMenuItems,
 } from '../controllers/menuController.js';
 import { verifyToken } from '../middleware/verifyToken.js';
 import { verifyVendor, verifyAdmin, verifyVendorOrAdmin } from '../middleware/verifyRole.js';
 import { verifyMenuItemOwnership } from '../middleware/verifyOwnership.js';
 
 const router = express.Router();
+
+// Admin route to list all submitted items (pending, approved, rejected)
+router.get('/admin/all-items', verifyToken, verifyAdmin, getAdminMenuItems);
 
 // Public routes
 router.get('/', getMenuItems);

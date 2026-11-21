@@ -297,3 +297,43 @@ export async function updateMenuItemStatus(req, res) {
     res.status(500).json({ success: false, message: 'Failed to update item status.' });
   }
 }
+
+/**
+ * Admin: Get all submitted menu items (pending, approved, rejected, inactive)
+ */
+export async function getAdminMenuItems(req, res) {
+  try {
+    const { search, status, category, limit = 100 } = req.query;
+    const query = {};
+
+    if (status && status !== 'all' && status !== 'All') {
+      query.status = status;
+    }
+
+    if (search && search.trim()) {
+      const sanitized = search.trim();
+      query.$or = [
+        { itemName: { $regex: sanitized, $options: 'i' } },
+        { description: { $regex: sanitized, $options: 'i' } },
+        { vendorName: { $regex: sanitized, $options: 'i' } },
+        { vendorEmail: { $regex: sanitized, $options: 'i' } },
+        { businessName: { $regex: sanitized, $options: 'i' } },
+      ];
+    }
+
+    if (category && category !== 'all' && category !== 'All') {
+      query.category = { $regex: `^${category.trim()}$`, $options: 'i' };
+    }
+
+    const items = await collections.menuItems
+      .find(query)
+      .sort({ createdAt: -1 })
+      .limit(parseInt(limit, 10) || 100)
+      .toArray();
+
+    res.json({ success: true, count: items.length, data: items });
+  } catch (error) {
+    console.error('❌ [getAdminMenuItems] Error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch catalog items for admin.' });
+  }
+}
