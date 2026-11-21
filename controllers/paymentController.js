@@ -7,6 +7,18 @@ const getStripe = () => {
 
 const PREMIUM_PLAN_PRICE = 29.0; // $29.00 / month
 
+function getCleanClientUrl(req) {
+  const candidate = req?.body?.origin || req?.headers?.origin || req?.headers?.referer || process.env.CLIENT_URL;
+  if (!candidate) return 'https://pizzahub-client-tan.vercel.app';
+  try {
+    const s = String(candidate).trim();
+    const p = new URL(s.startsWith('http') ? s : 'https://' + s);
+    return p.origin;
+  } catch {
+    return 'https://pizzahub-client-tan.vercel.app';
+  }
+}
+
 /**
  * Vendor: Create Stripe Checkout Session for Premium Subscription
  */
@@ -14,7 +26,7 @@ export async function createCheckoutSession(req, res) {
   try {
     const user = req.user;
     const vendorId = String(user._id || user.id);
-    const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+    const clientUrl = getCleanClientUrl(req);
 
     if (user.subscriptionPlan === 'premium') {
       return res.status(400).json({
