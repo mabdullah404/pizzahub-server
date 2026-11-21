@@ -116,7 +116,11 @@ app.use((err, req, res, next) => {
 });
 
 // Start Database & Listen for standalone/local development
-if (!process.env.VERCEL) {
+const isRunningTests =
+  process.env.NODE_ENV === 'test' ||
+  process.argv.some((arg) => arg.includes('test'));
+
+if (!process.env.VERCEL && !isRunningTests) {
   async function startServer() {
     try {
       await connectDB();

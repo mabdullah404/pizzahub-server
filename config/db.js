@@ -57,6 +57,14 @@ export async function connectDB() {
   }
 }
 
+export async function closeDB() {
+  if (clientInstance) {
+    await clientInstance.close();
+    clientInstance = null;
+    dbInstance = null;
+  }
+}
+
 export function getDB() {
   if (dbInstance) return dbInstance;
   const cl = getClient();
