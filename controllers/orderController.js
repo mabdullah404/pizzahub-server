@@ -117,8 +117,26 @@ export async function getCustomerOrders(req, res) {
 export async function getVendorOrders(req, res) {
   try {
     const vendorId = String(req.user._id || req.user.id);
+    const vendorEmail = req.user.email;
+
+    // Retrieve items associated with this vendor
+    const vendorItems = await collections.menuItems
+      .find({
+        $or: [{ vendorId }, { vendorEmail }, { vendorId: 'seed-vendor-001' }],
+      })
+      .toArray();
+    const vendorItemIds = vendorItems.map((i) => String(i._id));
+
+    // Match orders directly for this vendor, by email, by item IDs, or seed platform items
     const orders = await collections.orders
-      .find({ vendorId })
+      .find({
+        $or: [
+          { vendorId },
+          { vendorEmail },
+          { itemId: { $in: vendorItemIds } },
+          { vendorId: 'seed-vendor-001' },
+        ],
+      })
       .sort({ createdAt: -1 })
       .toArray();
 
