@@ -1,13 +1,7 @@
 import { collections, toObjectId } from '../config/db.js';
+import { DHAKA_LOCATIONS, VALID_CATEGORIES } from '../config/locations.js';
 
-export const VALID_CATEGORIES = [
-  'Classic Pizzas',
-  'Vegetarian Pizzas',
-  'Meat Lovers',
-  'Specialty / Gourmet Pizzas',
-  'Sides & Appetizers',
-  'Beverages & Desserts',
-];
+export { DHAKA_LOCATIONS, VALID_CATEGORIES };
 
 /**
  * Public Menu Listing with Advanced Search, Filtering, and Sorting
@@ -127,6 +121,17 @@ export async function createMenuItem(req, res) {
       return res.status(400).json({
         success: false,
         message: `Invalid category. Must be one of: ${VALID_CATEGORIES.join(', ')}`,
+      });
+    }
+
+    const trimmedLoc = location.trim();
+    const isValidLoc = DHAKA_LOCATIONS.some(
+      (loc) => loc.toLowerCase() === trimmedLoc.toLowerCase() || trimmedLoc.toLowerCase().includes(loc.toLowerCase())
+    );
+    if (!isValidLoc) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid location. Must be in Dhaka: ${DHAKA_LOCATIONS.join(', ')}`,
       });
     }
 
