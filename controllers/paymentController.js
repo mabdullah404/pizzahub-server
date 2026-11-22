@@ -70,7 +70,7 @@ export async function createCheckoutSession(req, res) {
         vendorName: user.name || 'Vendor',
         plan: 'premium',
       },
-      success_url: `${clientUrl}/dashboard/vendor/subscription?session_id={CHECKOUT_SESSION_ID}&payment=success`,
+      success_url: `${clientUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${clientUrl}/dashboard/vendor/subscription?payment=cancelled`,
     });
 
