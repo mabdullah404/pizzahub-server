@@ -1,170 +1,244 @@
-# 🍕 PizzaHub — Express.js REST API Server
+# 🍕 PizzaHub — Backend REST API Server
 
-PizzaHub Server is the high-performance backend REST API powering the PizzaHub pizza ordering, vendor management, and subscription platform.
+[![Node.js](https://img.shields.io/badge/Node.js-18+-green?style=for-the-badge&logo=node.js)](https://nodejs.org/)
+[![Express.js](https://img.shields.io/badge/Express.js-4.21.2-black?style=for-the-badge&logo=express)](https://expressjs.com/)
+[![MongoDB](https://img.shields.io/badge/MongoDB_Atlas-Native_Driver-47A248?style=for-the-badge&logo=mongodb)](https://www.mongodb.com/)
+[![JWT](https://img.shields.io/badge/JWT-Authentication-000000?style=for-the-badge&logo=json-web-tokens)](https://jwt.io/)
+[![Stripe](https://img.shields.io/badge/Stripe_SDK-v17-6772E5?style=for-the-badge&logo=stripe)](https://stripe.com/)
+[![Vercel](https://img.shields.io/badge/Deployed_on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/)
 
-- **Live Server API**: [https://pizzahub-server-mu.vercel.app](https://pizzahub-server-mu.vercel.app)
-- **Live Client URL**: [https://pizzahub-client-tan.vercel.app](https://pizzahub-client-tan.vercel.app)
-- **Server GitHub**: [https://github.com/mabdullah404/pizzahub-server](https://github.com/mabdullah404/pizzahub-server)
-- **Client GitHub**: [https://github.com/mabdullah404/pizzahub-client](https://github.com/mabdullah404/pizzahub-client)
-
----
-
-## 🛠️ Technology Stack & npm Packages
-
-- **Runtime**: Node.js (ES Modules, `"type": "module"`)
-- **Framework**: Express.js (`express`)
-- **Database**: MongoDB Native Driver (`mongodb`) on MongoDB Atlas
-- **Security & Auth**: `jsonwebtoken`, Better Auth Session verification, CORS (`cors`), Dotenv (`dotenv`)
-- **Payments**: Stripe Node SDK (`stripe`)
-- **File Uploads**: Multer memory storage (`multer`) & ImgBB API integration
-- **Development Tooling**: Nodemon (`nodemon`)
+**PizzaHub Server** is the high-performance, modular Node.js & Express REST API powering the PizzaHub platform. It implements secure role-based access control, real-time pizza catalog filtering, order dispatch workflows, ImgBB media uploads, and automated Stripe billing.
 
 ---
 
-## 📁 Server Folder Structure
+## 🌐 Live Endpoints & Repositories
 
-```text
-PizzaHub-Server/
-│
-├── config/
-│   └── db.js                 # MongoDB connection & collection helpers
-│
-├── middleware/
-│   ├── verifyToken.js        # Dual JWT & Better Auth session token verification
-│   ├── verifyRole.js         # Role-based guards (Admin, Vendor, Customer)
-│   └── verifyOwnership.js    # Resource ownership guards (Items & Orders)
-│
-├── routes/
-│   ├── menuRoutes.js         # Public menu, search/filter, and vendor CRUD
-│   ├── orderRoutes.js        # Pizza orders dispatch & customer cancellations
-│   ├── userRoutes.js         # Profile management & admin user blocking
-│   ├── dashboardRoutes.js    # Statistics & performance analytics
-│   ├── paymentRoutes.js      # Stripe checkout session & webhook
-│   └── uploadRoutes.js       # ImgBB image upload proxy
-│
-├── controllers/
-│   ├── menuController.js     # Menu logic, query filters, and Free tier limit
-│   ├── orderController.js    # Duplicate order prevention & decision states
-│   ├── userController.js     # Safe profile updates & block/unblock
-│   ├── dashboardController.js# Aggregate stats for each role
-│   └── paymentController.js  # Stripe sessions, webhooks & transaction ledger
-│
-├── services/
-│   └── imgbbService.js       # Server-side ImgBB multipart upload
-│
-├── utils/
-│   └── seedData.js           # Idempotent demo pizza records seeder
-│
-├── index.js                  # Express main entrypoint & webhook mounting
-├── .env.example
-├── .gitignore
-├── package.json
-└── README.md
+| Service | Target URL |
+|---|---|
+| **Live REST API Base** | [https://pizzahub-server-mu.vercel.app](https://pizzahub-server-mu.vercel.app) |
+| **Health Check Endpoint** | [https://pizzahub-server-mu.vercel.app/api/health](https://pizzahub-server-mu.vercel.app/api/health) |
+| **Live Client Frontend** | [https://pizzahub-client-tan.vercel.app](https://pizzahub-client-tan.vercel.app) |
+| **Server GitHub Repository** | [https://github.com/mabdullah404/pizzahub-server](https://github.com/mabdullah404/pizzahub-server) |
+| **Client GitHub Repository** | [https://github.com/mabdullah404/pizzahub-client](https://github.com/mabdullah404/pizzahub-client) |
+
+---
+
+## 🏗️ Architecture & Security Model
+
+```
+       Incoming HTTP Request
+                 │
+                 ▼
+       ┌───────────────────┐
+       │   CORS & Helmet   │  <-- Allowed client origin with credentials
+       └─────────┬─────────┘
+                 │
+                 ▼
+       ┌───────────────────┐
+       │   verifyToken()   │  <-- Validates Bearer JWT / Better Auth Session
+       └─────────┬─────────┘
+                 │
+                 ▼
+       ┌───────────────────┐
+       │   requireRole()   │  <-- Role Check: 'admin' | 'vendor' | 'customer'
+       └─────────┬─────────┘
+                 │
+                 ▼
+       ┌───────────────────┐
+       │ verifyOwnership() │  <-- Vendor can only modify own items / orders
+       └─────────┬─────────┘
+                 │
+                 ▼
+       ┌───────────────────┐
+       │ Route Controller  │  <-- Business logic & MongoDB Atlas operations
+       └───────────────────┘
 ```
 
+### Security Principles Enforced:
+1. **Zero Client Trust**: All user identities, emails, and roles are extracted strictly from cryptographically verified tokens, never from request bodies.
+2. **Suspended Account Interception**: Blocked accounts (`isBlocked: true` or `banned: true`) are halted immediately with `403 Forbidden`.
+3. **Immutable Decisions**: Orders and menu item approvals cannot be mutated once decided.
+4. **CORS Isolation**: Secure configuration accepting only whitelisted client origins (`CLIENT_URL` / Vercel domain).
+
 ---
 
-## ⚙️ Environment Variables (`.env`)
+## 🗄️ Database Collections (MongoDB Atlas)
 
-Create a `.env` file inside `pizzahub-server/`:
+The server utilizes four core collections within MongoDB:
+
+| Collection | Key Fields & Constraints | Description |
+|---|---|---|
+| `users` | `name`, `email`, `role`, `isBlocked`, `businessName`, `subscriptionPlan`, `subscriptionExpiresAt` | User identities, roles, and vendor subscription states. |
+| `menuItems` | `vendorId`, `itemName`, `category`, `description`, `price`, `location`, `images[]`, `status` | Pizza catalog entries with status (`pending`, `approved`, `rejected`, `inactive`). |
+| `orders` | `itemId`, `vendorId`, `customerId`, `deliveryDate`, `deliveryAddress`, `message`, `status` | Customer food orders with states (`pending`, `accepted`, `rejected`, `cancelled`). |
+| `transactions` | `vendorId`, `plan`, `amount`, `currency`, `stripeSessionId`, `status`, `createdAt` | Immutable financial ledger for Stripe subscription events. |
+
+**Allowed Categories:**
+- `Classic Pizzas`
+- `Vegetarian Pizzas`
+- `Meat Lovers`
+- `Specialty / Gourmet Pizzas`
+- `Sides & Appetizers`
+- `Beverages & Desserts`
+
+---
+
+## 💳 Stripe Monetization Architecture
+
+The backend supports subscription upgrades for vendors from **Free Plan** (max 3 active items) to **Premium Pizzeria** ($29/month, unlimited items):
+
+1. **Checkout Initialization (`POST /api/payments/create-checkout-session`)**:
+   - Creates a Stripe checkout session dynamically configuring the `clientUrl`.
+   - Sets `success_url` directly to `${clientUrl}/dashboard/vendor/subscription?session_id={CHECKOUT_SESSION_ID}&payment=success`.
+   - Sets `cancel_url` directly to `${clientUrl}/dashboard/vendor/subscription?payment=cancelled`.
+2. **Signature Verified Webhook (`POST /api/payments/webhook`)**:
+   - Reads raw request body and verifies cryptographic signature against `STRIPE_WEBHOOK_SECRET`.
+   - Prevents replay attacks and double crediting via idempotent transaction checks (`stripeSessionId`).
+   - Updates vendor document to `subscriptionPlan: 'premium'` with an expiration date set 30 days ahead.
+3. **Session Confirmation Fallback (`POST /api/payments/confirm`)**:
+   - Allows instant client verification upon redirect completion.
+
+---
+
+## 📡 REST API Reference
+
+### Public & Health Endpoints
+| Method | Endpoint | Access | Description |
+|---|---|---|---|
+| `GET` | `/` | Public | Root welcome message |
+| `GET` | `/api/health` | Public | Health check endpoint for uptime and monitoring |
+| `GET` | `/api/menu` | Public | Browse approved pizzas with `search`, `category`, `location`, `sort` |
+| `GET` | `/api/menu/:id` | Public | Retrieve single pizza details by ID |
+
+### Menu Management (Vendor & Admin)
+| Method | Endpoint | Access | Description |
+|---|---|---|---|
+| `POST` | `/api/menu` | Vendor | Create pizza (Enforces Free tier 3-item limit) |
+| `GET` | `/api/menu/vendor/my-items` | Vendor | Retrieve vendor's own menu listings |
+| `PUT` | `/api/menu/:id` | Vendor / Admin | Update pizza item details (Ownership verified) |
+| `DELETE` | `/api/menu/:id` | Vendor / Admin | Delete pizza item (Ownership verified) |
+| `GET` | `/api/menu/admin/all-items` | Admin | Retrieve all items including pending and rejected |
+| `PATCH` | `/api/menu/:id/status` | Admin | Approve or reject submitted menu item |
+
+### Orders & Dispatch (Customer & Vendor)
+| Method | Endpoint | Access | Description |
+|---|---|---|---|
+| `POST` | `/api/orders` | Customer | Place order (Prevents duplicate same-day orders) |
+| `GET` | `/api/orders/customer/my-orders` | Customer | Customer order history with status |
+| `PATCH` | `/api/orders/:id/cancel` | Customer | Cancel a pending order |
+| `GET` | `/api/orders/vendor/my-orders` | Vendor | Incoming customer orders for vendor |
+| `PATCH` | `/api/orders/:id/status` | Vendor | Accept or reject order (Irreversible decision) |
+
+### User Management & Profile
+| Method | Endpoint | Access | Description |
+|---|---|---|---|
+| `GET` | `/api/users/me` | Authenticated | Retrieve current user profile and role |
+| `PUT` | `/api/users/profile` | Authenticated | Update allowed profile fields |
+| `GET` | `/api/users` | Admin | Search and list all registered users |
+| `PATCH` | `/api/users/:id/block` | Admin | Suspend / block user account |
+| `PATCH` | `/api/users/:id/unblock` | Admin | Restore / unblock user account |
+
+### Analytics & Reports
+| Method | Endpoint | Access | Description |
+|---|---|---|---|
+| `GET` | `/api/dashboard/vendor` | Vendor | Vendor order counts, active items, and revenue |
+| `GET` | `/api/dashboard/customer` | Customer | Customer order metrics |
+| `GET` | `/api/dashboard/admin` | Admin | Platform-wide totals and gross subscription volume |
+
+### Payments & Media
+| Method | Endpoint | Access | Description |
+|---|---|---|---|
+| `POST` | `/api/payments/create-checkout-session` | Vendor | Create Stripe checkout session |
+| `POST` | `/api/payments/webhook` | Stripe | Webhook handler with signature verification |
+| `POST` | `/api/payments/confirm` | Vendor | Confirm session on return to dashboard |
+| `GET` | `/api/payments/transactions` | Admin | Immutable read-only transaction audit log |
+| `POST` | `/api/upload` | Authenticated | Proxy image upload to ImgBB CDN |
+
+---
+
+## ⚙️ Environment Configuration
+
+Create a `.env` file in the `pizzahub-server/` directory using `.env.example` as a template:
+
+```bash
+cp .env.example .env
+```
+
+### Environment Variables Template
 
 ```env
 PORT=5000
+MONGODB_URI=your_mongodb_atlas_connection_string_here
+MONGODB_URL=your_mongodb_atlas_connection_string_here
 DB_NAME=pizzaHubDB
-MONGODB_URL=your_mongodb_atlas_connection_string
 CLIENT_URL=http://localhost:3000
 
-# Better Auth Secret (shared with Next.js client for JWT cryptographic verification)
+# Better Auth Secret (Shared with Next.js client)
 BETTER_AUTH_SECRET=your_better_auth_secret_here
+BETTER_AUTH_URL=http://localhost:3000
+JWT_SECRET=your_jwt_secret_here
 
-# Stripe Integration (for Vendor Premium Subscription)
+# Google OAuth Credentials
+GOOGLE_CLIENT_ID=your_google_client_id_here
+GOOGLE_CLIENT_SECRET=your_google_client_secret_here
+
+# ImgBB API Key for Image Uploads
+IMGBB_API_KEY=your_imgbb_api_key_here
+
+# Administrative Seeding (Idempotent)
+ADMIN_EMAIL=your_admin_email_here
+ADMIN_PASSWORD=your_admin_secure_password_here
+
+# Stripe Integration
 STRIPE_SECRET_KEY=your_stripe_secret_key_here
 STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret_here
-
-# ImgBB API Key (for Vendor Menu Item Image Hosting)
-IMGBB_API_KEY=your_imgbb_api_key_here
 ```
 
----
-
-## 🔐 Challenge Requirement 2: JWT & Token Verification Flow
-
-The Express backend implements robust authentication verification:
-
-1. **Header Parsing**: Reads incoming `Authorization: Bearer <token>` from the client request.
-2. **Dual Verification**:
-   - **Approach A (Signed JWT)**: Cryptographically verifies the token using `jwt.verify(token, process.env.BETTER_AUTH_SECRET)`. Validates expiration, signature, and user claims (`sub`, `id`, `email`).
-   - **Approach B (Session Database Lookup)**: Looks up active sessions in MongoDB's `session` collection where `session.token === token`. Verifies `session.expiresAt > Date.now()`.
-3. **Database User Hydration**: Loads the matching user document from MongoDB's `user` collection.
-4. **Suspended Account Enforcement**: If `user.isBlocked === true` or `user.banned === true`, the request is immediately rejected with HTTP `403 Forbidden`.
-5. **Role-Based Guards**: Protected routes enforce strict roles via `verifyAdmin`, `verifyVendor`, or `verifyCustomer`. Untrusted frontend roles are never accepted.
+> **Security Assurance:** Never commit actual `.env` files or credentials into the repository. All secrets must be securely configured inside your local environment or host dashboard (e.g., Vercel Environment Variables).
 
 ---
 
-## 🔍 Challenge Requirement 1: Advanced Search, Filtering & Sorting
+## 🚀 Local Installation & Running
 
-The `GET /api/menu` endpoint processes multi-criteria query parameters:
+### Prerequisites
+- Node.js (v18.0.0 or higher)
+- MongoDB Atlas cluster or local MongoDB instance
 
-- `search`: Case-insensitive regex match against `itemName` and `description`.
-- `category`: Exact case-insensitive match against allowed categories (`Classic Pizzas`, `Vegetarian Pizzas`, `Meat Lovers`, `Specialty / Gourmet Pizzas`, `Sides & Appetizers`, `Beverages & Desserts`).
-- `location`: Case-insensitive regex filter for restaurant locations (e.g., `Banani`, `Gulshan`, `Dhanmondi`).
-- `sort`: 
-  - `price_asc`: Sorts by price ascending (`{ price: 1 }`).
-  - `price_desc`: Sorts by price descending (`{ price: -1 }`).
-  - `newest`: Sorts newest recipes first (`{ createdAt: -1 }`).
-- **Security & Privacy**: Automatically filters `{ status: "approved" }` so rejected, pending, or inactive items are never exposed publicly.
-
----
-
-## 💳 Stripe Webhook & Subscription Architecture
-
-1. **Vendor Checkout**: Authenticated vendor initiates upgrade via `POST /api/payments/create-checkout-session`.
-2. **Session Creation**: Backend invokes `stripe.checkout.sessions.create()` with `metadata: { vendorId, plan: 'premium' }`.
-3. **Raw Body Webhook Handling**: Express mounts `POST /api/payments/webhook` with `express.raw({ type: 'application/json' })` before JSON body parsing.
-4. **Cryptographic Verification**: Validates `stripe-signature` header against `STRIPE_WEBHOOK_SECRET` using `stripe.webhooks.constructEvent()`.
-5. **Idempotency**: Checks if `stripeSessionId` was already recorded in the `transactions` collection to prevent duplicate subscription activations.
-6. **Activation**: Records transaction in `transactions` and upgrades vendor record in `user` with `{ subscriptionPlan: 'premium', subscriptionExpiresAt: Date.now() + 30 days }`.
-
----
-
-## 🔌 API Endpoints Summary
-
-| Method | Endpoint | Access | Description |
-|---|---|---|---|
-| `GET` | `/` | Public | Server health status |
-| `GET` | `/api/menu` | Public | Browse approved pizzas with search, category, location, and sort |
-| `GET` | `/api/menu/:id` | Public / Auth | View item details |
-| `POST` | `/api/menu` | Vendor | Create pizza (enforces Free tier max 3 active items) |
-| `GET` | `/api/menu/vendor/my-items` | Vendor | View vendor's own menu catalog |
-| `PUT` | `/api/menu/:id` | Vendor / Admin | Update pizza item details |
-| `DELETE` | `/api/menu/:id` | Vendor / Admin | Delete pizza item |
-| `PATCH` | `/api/menu/:id/status` | Admin | Approve or reject submitted menu item |
-| `POST` | `/api/orders` | Customer | Place order (prevents duplicate active orders) |
-| `GET` | `/api/orders/customer/my-orders` | Customer | View customer order history |
-| `PATCH` | `/api/orders/:id/cancel` | Customer | Cancel pending order |
-| `GET` | `/api/orders/vendor/my-orders` | Vendor | View incoming customer orders |
-| `PATCH` | `/api/orders/:id/status` | Vendor | Accept or reject order (only once) |
-| `GET` | `/api/users/me` | Auth | Current user profile |
-| `PUT` | `/api/users/profile` | Auth | Update name, image, business name, phone |
-| `GET` | `/api/users` | Admin | List all registered users with search/filter |
-| `PATCH` | `/api/users/:id/block` | Admin | Suspend / block user |
-| `PATCH` | `/api/users/:id/unblock` | Admin | Unblock user |
-| `GET` | `/api/dashboard/vendor` | Vendor | Vendor statistics and order counts |
-| `GET` | `/api/dashboard/customer` | Customer | Customer orders statistics |
-| `GET` | `/api/dashboard/admin` | Admin | Platform statistics, totals, and revenue |
-| `POST` | `/api/payments/create-checkout-session` | Vendor | Create Stripe checkout session |
-| `POST` | `/api/payments/webhook` | Stripe | Webhook handler with signature check |
-| `GET` | `/api/payments/transactions` | Admin | Immutable read-only transaction ledger |
-| `POST` | `/api/upload` | Auth | ImgBB image upload proxy |
-
----
-
-## 🚀 Running Locally
-
+### 1. Install Dependencies
 ```bash
+git clone https://github.com/mabdullah404/pizzahub-server.git
 cd pizzahub-server
 npm install
-npm run dev
 ```
 
-Server runs on: `http://localhost:5000`
+### 2. Configure Environment
+Create `.env` using the template provided above.
+
+### 3. Seed Platform Data (Optional)
+```bash
+# Seed initial admin account idempotently
+node utils/seedAdmin.js
+```
+
+### 4. Run Test Suite
+```bash
+npm test
+```
+*Executes all 11 unit and integration security tests verifying token decoding, role gating, ownership protection, and tier limits.*
+
+### 5. Start Server
+```bash
+# Development mode with live reload
+npm run dev
+
+# Production mode
+npm start
+```
+
+Server will start on: `http://localhost:5000`
+
+---
+
+## 📄 License
+
+This project is licensed under the **MIT License**.
