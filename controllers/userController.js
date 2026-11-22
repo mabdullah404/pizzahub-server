@@ -6,17 +6,23 @@ import { collections, toObjectId } from '../config/db.js';
 export async function getCurrentUser(req, res) {
   try {
     const user = req.user;
+    const rawUserId = String(user._id || user.id);
+    let profileDoc = null;
+    try {
+      profileDoc = await collections.profiles.findOne({ userId: rawUserId });
+    } catch {}
+
     res.json({
       success: true,
       data: {
         id: user._id || user.id,
         _id: user._id || user.id,
-        name: user.name,
+        name: profileDoc?.name || user.name,
         email: user.email,
-        image: user.image,
+        image: profileDoc?.image || user.image,
         role: user.role || 'customer',
-        businessName: user.businessName || '',
-        phone: user.phone || '',
+        businessName: profileDoc?.businessName || user.businessName || '',
+        phone: profileDoc?.phone || user.phone || '',
         subscriptionPlan: user.subscriptionPlan || 'free',
         subscriptionExpiresAt: user.subscriptionExpiresAt || null,
         isBlocked: user.isBlocked || user.banned || false,
@@ -56,6 +62,30 @@ export async function updateProfile(req, res) {
     );
 
     const updated = result.value || result;
+
+    // Synchronize to dedicated 'profiles' collection for persistent profile records
+    try {
+      const rawUserId = String(user._id || user.id);
+      await collections.profiles.updateOne(
+        { userId: rawUserId },
+        {
+          $set: {
+            userId: rawUserId,
+            email: user.email,
+            name: updateFields.name || user.name,
+            image: updateFields.image !== undefined ? updateFields.image : user.image,
+            businessName: updateFields.businessName !== undefined ? updateFields.businessName : user.businessName,
+            phone: updateFields.phone !== undefined ? updateFields.phone : user.phone,
+            role: user.role || 'customer',
+            updatedAt: new Date(),
+          },
+          $setOnInsert: { createdAt: new Date() },
+        },
+        { upsert: true }
+      );
+    } catch (profileErr) {
+      console.warn('⚠️ [updateProfile] Non-blocking profile collection sync error:', profileErr.message);
+    }
 
     res.json({
       success: true,

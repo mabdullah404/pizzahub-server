@@ -100,6 +100,9 @@ export const collections = {
   get favorites() {
     return getDB().collection('favorites');
   },
+  get profiles() {
+    return getDB().collection('profiles');
+  },
 };
 
 export function toObjectId(id) {
