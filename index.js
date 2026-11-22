@@ -50,7 +50,7 @@ app.use(
       ) {
         return callback(null, true);
       }
-      return callback(null, true);
+      return callback(new Error('Blocked by CORS policy'));
     },
     credentials: true,
   })
