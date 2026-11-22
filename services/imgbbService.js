@@ -45,5 +45,5 @@ export async function uploadToImgBB(fileBuffer, originalName = 'pizza.jpg') {
     throw new Error(data.error?.message || 'Failed to upload image to ImgBB.');
   }
 
-  return data.data.url || data.data.display_url;
+  return data.data.image?.url || data.data.url || data.data.display_url;
 }
