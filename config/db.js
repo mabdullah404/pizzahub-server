@@ -11,17 +11,26 @@ let clientInstance = null;
 
 export function getClient() {
   if (!clientInstance) {
-    const uri = process.env.MONGODB_URL || process.env.MONGODB_URI;
+    let uri = (
+      process.env.MONGODB_URI ||
+      process.env.MONGODB_URL ||
+      process.env.BETTER_AUTH_DB_URL ||
+      process.env.MONGO_URI ||
+      ''
+    ).trim().replace(/^["']|["']$/g, '');
+
+    if (uri.includes('authSource=admi') && !uri.includes('authSource=admin')) {
+      uri = uri.replace(/authSource=admi\b/gi, 'authSource=admin');
+    }
+
     if (!uri) {
-      console.warn('⚠️ MONGODB_URL is missing in environment variables!');
+      console.warn('⚠️ MONGODB_URI is missing in environment variables!');
       return null;
     }
     clientInstance = new MongoClient(uri, {
-      serverApi: {
-        version: ServerApiVersion.v1,
-        strict: true,
-        deprecationErrors: true,
-      },
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 8000,
+      connectTimeoutMS: 10000,
     });
   }
   return clientInstance;
