@@ -135,6 +135,15 @@ export async function createMenuItem(req, res) {
       });
     }
 
+    // Verify Vendor Approval Status (Assignment Requirement: Vendor must be approved by admin)
+    if (user.role === 'vendor' && (user.status === 'pending' || user.isApproved === false)) {
+      return res.status(403).json({
+        success: false,
+        code: 'VENDOR_NOT_APPROVED',
+        message: 'Your restaurant account is currently pending administrative review. You will be able to publish recipes once approved by an administrator.',
+      });
+    }
+
     // Verify Free Tier Limits
     const isPremium = user.subscriptionPlan === 'premium';
     const vendorId = String(user._id || user.id);

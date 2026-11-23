@@ -26,6 +26,8 @@ export async function getCurrentUser(req, res) {
         subscriptionPlan: user.subscriptionPlan || 'free',
         subscriptionExpiresAt: user.subscriptionExpiresAt || null,
         isBlocked: user.isBlocked || user.banned || false,
+        status: user.status || (user.role === 'vendor' ? 'pending' : 'approved'),
+        isApproved: user.isApproved !== undefined ? user.isApproved : (user.role === 'vendor' ? user.status === 'approved' : true),
         createdAt: user.createdAt,
       },
     });
@@ -189,5 +191,119 @@ export async function unblockUser(req, res) {
   } catch (error) {
     console.error('❌ [unblockUser] Error:', error);
     res.status(500).json({ success: false, message: 'Failed to unblock user.' });
+  }
+}
+
+/**
+ * Admin: Approve a vendor account
+ */
+export async function approveVendor(req, res) {
+  try {
+    const { id } = req.params;
+    const objectId = toObjectId(id);
+    const query = objectId ? { _id: objectId } : { id: String(id) };
+
+    const targetUser = await collections.users.findOne(query);
+    if (!targetUser) {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+
+    if (targetUser.role !== 'vendor') {
+      return res.status(400).json({
+        success: false,
+        message: 'Only vendor accounts can be approved as a restaurant partner.',
+      });
+    }
+
+    await collections.users.updateOne(query, {
+      $set: {
+        status: 'approved',
+        isApproved: true,
+        approvedAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+
+    res.json({
+      success: true,
+      message: `Vendor "${targetUser.name || targetUser.businessName || targetUser.email}" approved successfully.`,
+    });
+  } catch (error) {
+    console.error('❌ [approveVendor] Error:', error);
+    res.status(500).json({ success: false, message: 'Failed to approve vendor.' });
+  }
+}
+
+/**
+ * Admin: Reject a vendor account
+ */
+export async function rejectVendor(req, res) {
+  try {
+    const { id } = req.params;
+    const objectId = toObjectId(id);
+    const query = objectId ? { _id: objectId } : { id: String(id) };
+
+    const targetUser = await collections.users.findOne(query);
+    if (!targetUser) {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+
+    await collections.users.updateOne(query, {
+      $set: {
+        status: 'rejected',
+        isApproved: false,
+        rejectedAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+
+    res.json({
+      success: true,
+      message: `Vendor "${targetUser.name || targetUser.email}" rejected.`,
+    });
+  } catch (error) {
+    console.error('❌ [rejectVendor] Error:', error);
+    res.status(500).json({ success: false, message: 'Failed to reject vendor.' });
+  }
+}
+
+/**
+ * Admin: General user status update (e.g. status: 'approved' | 'pending' | 'rejected')
+ */
+export async function updateUserStatus(req, res) {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!['approved', 'pending', 'rejected'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid status. Must be approved, pending, or rejected.',
+      });
+    }
+
+    const objectId = toObjectId(id);
+    const query = objectId ? { _id: objectId } : { id: String(id) };
+
+    const targetUser = await collections.users.findOne(query);
+    if (!targetUser) {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+
+    await collections.users.updateOne(query, {
+      $set: {
+        status,
+        isApproved: status === 'approved',
+        updatedAt: new Date(),
+      },
+    });
+
+    res.json({
+      success: true,
+      message: `User status updated to ${status}.`,
+    });
+  } catch (error) {
+    console.error('❌ [updateUserStatus] Error:', error);
+    res.status(500).json({ success: false, message: 'Failed to update user status.' });
   }
 }

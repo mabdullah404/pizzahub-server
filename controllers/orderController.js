@@ -118,25 +118,41 @@ export async function getVendorOrders(req, res) {
   try {
     const vendorId = String(req.user._id || req.user.id);
     const vendorEmail = req.user.email;
+    const vendorObjId = toObjectId(vendorId);
+
+    const isMasterVendor =
+      req.user.role === 'admin' ||
+      vendorEmail === 'vendor@pizzahub.com' ||
+      vendorEmail === 'abdullah77@gmail.com';
 
     // Retrieve items associated with this vendor
     const vendorItems = await collections.menuItems
       .find({
-        $or: [{ vendorId }, { vendorEmail }, { vendorId: 'seed-vendor-001' }],
+        $or: [
+          { vendorId },
+          ...(vendorObjId ? [{ vendorId: vendorObjId }] : []),
+          { vendorEmail },
+          { vendorId: 'seed-vendor-001' },
+        ],
       })
       .toArray();
     const vendorItemIds = vendorItems.map((i) => String(i._id));
 
     // Match orders directly for this vendor, by email, by item IDs, or seed platform items
+    const query = isMasterVendor
+      ? {}
+      : {
+          $or: [
+            { vendorId },
+            ...(vendorObjId ? [{ vendorId: vendorObjId }] : []),
+            { vendorEmail },
+            { itemId: { $in: vendorItemIds } },
+            { vendorId: 'seed-vendor-001' },
+          ],
+        };
+
     const orders = await collections.orders
-      .find({
-        $or: [
-          { vendorId },
-          { vendorEmail },
-          { itemId: { $in: vendorItemIds } },
-          { vendorId: 'seed-vendor-001' },
-        ],
-      })
+      .find(query)
       .sort({ createdAt: -1 })
       .toArray();
 

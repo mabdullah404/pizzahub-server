@@ -5,6 +5,9 @@ import {
   getAllUsers,
   blockUser,
   unblockUser,
+  approveVendor,
+  rejectVendor,
+  updateUserStatus,
 } from '../controllers/userController.js';
 import { verifyToken } from '../middleware/verifyToken.js';
 import { verifyAdmin } from '../middleware/verifyRole.js';
@@ -19,5 +22,8 @@ router.put('/profile', verifyToken, updateProfile);
 router.get('/', verifyToken, verifyAdmin, getAllUsers);
 router.patch('/:id/block', verifyToken, verifyAdmin, blockUser);
 router.patch('/:id/unblock', verifyToken, verifyAdmin, unblockUser);
+router.patch('/:id/approve-vendor', verifyToken, verifyAdmin, approveVendor);
+router.patch('/:id/reject-vendor', verifyToken, verifyAdmin, rejectVendor);
+router.patch('/:id/status', verifyToken, verifyAdmin, updateUserStatus);
 
 export default router;
